@@ -5,7 +5,7 @@ const SECRET = new TextEncoder().encode(
   process.env.SESSION_SECRET ?? 'ferreteria-secret-key'
 )
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const token = request.cookies.get('ferreteria_session')?.value
   const { pathname } = request.nextUrl
 
