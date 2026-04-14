@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id          String      @id @default(cuid())
+  email       String      @unique
+  password    String
+  nombre      String
+  role        String      @default("CLIENTE")
+  tipoCliente String      @default("MINORISTA")
+  activo      Boolean     @default(true)
+  sucursalId  String?
+  creadoEn    DateTime    @default(now())
+
+  sucursal Sucursal? @relation(fields: [sucursalId], references: [id])
+  ventas   Venta[]   @relation("VendedorVentas")
+  cliente  Cliente?
+}
+
+model Sucursal {
+  id        String   @id @default(cuid())
+  nombre    String
+  direccion String
+  telefono  String
+  activa    Boolean  @default(true)
+  creadoEn  DateTime @default(now())
+
+  usuarios        User[]
+  inventarios     Inventario[]
+  ventas          Venta[]
+  transferOrigen  Transferencia[] @relation("TransferOrigen")
+  transferDestino Transferencia[] @relation("TransferDestino")
+}
+
+model Categoria {
+  id     String @id @default(cuid())
+  nombre String
+  slug   String @unique
+  icono  String @default("package")
+
+  productos Producto[]
+}
+
+model Producto {
+  id              String  @id @default(cuid())
+  nombre          String
+  descripcion     String  @default("")
+  sku             String  @unique
+  precioMinorista Float
+  precioMayorista Float
+  imagenUrl       String  @default("")
+  activo          Boolean @default(true)
+  categoriaId     String
+
+  categoria   Categoria    @relation(fields: [categoriaId], references: [id])
+  inventarios Inventario[]
+  ventaItems  VentaItem[]
+  pedidoItems PedidoItem[]
+}
+
+model Inventario {
+  id            String   @id @default(cuid())
+  productoId    String
+  sucursalId    String
+  stock         Int      @default(0)
+  stockMinimo   Int      @default(5)
+  actualizadoEn DateTime @updatedAt
+
+  producto Producto @relation(fields: [productoId], references: [id])
+  sucursal Sucursal @relation(fields: [sucursalId], references: [id])
+
+  @@unique([productoId, sucursalId])
+}
+
+model Transferencia {
+  id                String   @id @default(cuid())
+  productoId        String
+  sucursalOrigenId  String
+  sucursalDestinoId String
+  cantidad          Int
+  notas             String   @default("")
+  estado            String   @default("PENDIENTE")
+  creadoEn          DateTime @default(now())
+
+  sucursalOrigen  Sucursal @relation("TransferOrigen", fields: [sucursalOrigenId], references: [id])
+  sucursalDestino Sucursal @relation("TransferDestino", fields: [sucursalDestinoId], references: [id])
+}
+
+model Venta {
+  id            String   @id @default(cuid())
+  sucursalId    String
+  vendedorId    String
+  clienteNombre String   @default("Público General")
+  total         Float
+  tipo          String   @default("MOSTRADOR")
+  estado        String   @default("COMPLETADA")
+  notas         String   @default("")
+  creadoEn      DateTime @default(now())
+
+  sucursal Sucursal  @relation(fields: [sucursalId], references: [id])
+  vendedor User      @relation("VendedorVentas", fields: [vendedorId], references: [id])
+  items    VentaItem[]
+}
+
+model VentaItem {
+  id         String @id @default(cuid())
+  ventaId    String
+  productoId String
+  cantidad   Int
+  precio     Float
+
+  venta    Venta    @relation(fields: [ventaId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
+}
+
+model Pedido {
+  id         String   @id @default(cuid())
+  clienteId  String
+  total      Float
+  estado     String   @default("PENDIENTE")
+  direccion  String
+  ciudad     String   @default("")
+  telefono   String   @default("")
+  metodoPago String   @default("transferencia")
+  notas      String   @default("")
+  creadoEn   DateTime @default(now())
+
+  cliente Cliente    @relation(fields: [clienteId], references: [id])
+  items   PedidoItem[]
+}
+
+model PedidoItem {
+  id         String @id @default(cuid())
+  pedidoId   String
+  productoId String
+  cantidad   Int
+  precio     Float
+
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
+}
+
+model Cliente {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  tipoCliente String   @default("MINORISTA")
+  rfc         String   @default("")
+  empresa     String   @default("")
+  telefono    String   @default("")
+  direccion   String   @default("")
+  creadoEn    DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id])
+  pedidos Pedido[]
+}
